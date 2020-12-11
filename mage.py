@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-#
-# Send mp4 streaming media URIs to Samsung Smart TV for immediate playback
-#
+# This code is heavily based on https://github.com/probonopd/video2smarttv
 
 import argparse
 import html
@@ -29,7 +27,6 @@ from twisted.web.static import File
 # Function to discover services on the network using SSDP
 # Inspired by https://gist.github.com/dankrause/6000248
 #
-
 
 class SsdpFakeSocket(BytesIO):
     def makefile(self, *args, **kw): return self
