@@ -3,13 +3,11 @@
 # This code is heavily based on https://github.com/probonopd/video2smarttv
 
 import argparse
-import html
 import logging
 import os
 import re
 import requests
 import socket
-import subprocess
 import sys
 import tempfile
 import threading
@@ -27,6 +25,7 @@ from twisted.web.static import File
 # Function to discover services on the network using SSDP
 # Inspired by https://gist.github.com/dankrause/6000248
 #
+
 
 class SsdpFakeSocket(BytesIO):
     def makefile(self, *args, **kw): return self
@@ -51,7 +50,7 @@ def ssdp_discover(service):
     return results
 
 
-AVTransportTemplate = f'<?xml version="1.0" encoding="utf-8"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:SetAVTransportURI xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID><CurrentURI>$$$URI$$$</CurrentURI><CurrentURIMetaData></CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
+AVTransportTemplate = '<?xml version="1.0" encoding="utf-8"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:SetAVTransportURI xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID><CurrentURI>$$$URI$$$</CurrentURI><CurrentURIMetaData></CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
 
 PlayMessage = '<?xml version="1.0" encoding="utf-8"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:Play xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID><Speed>1</Speed></u:Play></s:Body></s:Envelope>'
 
@@ -66,8 +65,7 @@ def send_message(ip, port, uri, message, action):
     headers = {"Content-Type": "text/xml; charset=utf-8",
                "SOAPAction": f"\"urn:schemas-upnp-org:service:AVTransport:1#{action}\"",
                }
-    response = requests.post(f"http://{ip}:{port}{uri}", headers=headers,
-                             data=message)
+    requests.post(f"http://{ip}:{port}{uri}", headers=headers, data=message)
 
 
 def prepare_media(media):
@@ -85,15 +83,14 @@ class DLNAFile(File):
         return self.render_GET(request)
 
 
-def serve_media(media, host, lock):
+def serve_media(media, host, ready):
     global PORT
     with tempfile.TemporaryDirectory() as path:
         os.chdir(path)
         prepare_media(media)
         open("index.html", "w").close()
         host[1] = reactor.listenTCP(0, Site(DLNAFile(path))).getHost().port
-        print(f"Serving on {host[0]}:{host[1]}...")
-        lock.release()
+        ready.set()
         reactor.run(installSignalHandlers=False)
 
 
@@ -140,13 +137,20 @@ if __name__ == '__main__':
 
     host = [get_host_ip(tv["ip"]), None]
 
-    lock = threading.Lock()
-    lock.acquire()
-    threading.Thread(target=serve_media, args=(args.video, host, lock,)).start()
+    server_ready = threading.Event()
+    server_thread = threading.Thread(target=serve_media, args=(args.video, host, server_ready,))
+    server_thread.start()
 
-    lock.acquire()
+    server_ready.wait()
     print(f"Casting to \"{tv['name']}\"...")
     message = AVTransportTemplate.replace("$$$URI$$$",
                                           f"http://{host[0]}:{host[1]}/media.mp4")
     send_message(tv["ip"], tv["port"], tv["url"], message, "SetAVTransportURI")
     send_message(tv["ip"], tv["port"], tv["url"], PlayMessage, "Play")
+
+    print("Done. Send interrupt (Ctrl-C) to exit.")
+    try:
+        server_thread.join()
+    except KeyboardInterrupt:
+        print("Cleaning up...")
+        reactor.stop()
