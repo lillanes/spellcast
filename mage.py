@@ -55,15 +55,11 @@ AVTransportTemplate = f'<?xml version="1.0" encoding="utf-8"?><s:Envelope s:enco
 
 PlayMessage = '<?xml version="1.0" encoding="utf-8"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:Play xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID><Speed>1</Speed></u:Play></s:Body></s:Envelope>'
 
-HOST = None
-PORT = None
-
 
 def get_host_ip(target_ip):
-    global HOST
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         s.connect((target_ip, 0))
-        HOST = s.getsockname()[0]
+        return s.getsockname()[0]
 
 
 def send_message(ip, port, uri, message, action):
@@ -77,8 +73,6 @@ def send_message(ip, port, uri, message, action):
 def prepare_media(media):
     print(f"Preparing media ({media})...")
     os.symlink(media, "media.mp4")
-    # subprocess.run(["cp", media, "media.mp4"])
-    # subprocess.run(["ffmpeg", "-i", media, "-codec", "copy", "media.mp4"])
 
 
 class DLNAFile(File):
@@ -91,14 +85,14 @@ class DLNAFile(File):
         return self.render_GET(request)
 
 
-def serve_media(media, lock):
+def serve_media(media, host, lock):
     global PORT
     with tempfile.TemporaryDirectory() as path:
         os.chdir(path)
         prepare_media(media)
         open("index.html", "w").close()
-        PORT = reactor.listenTCP(0, Site(DLNAFile(path))).getHost().port
-        print(f"Serving on {HOST}:{PORT}...")
+        host[1] = reactor.listenTCP(0, Site(DLNAFile(path))).getHost().port
+        print(f"Serving on {host[0]}:{host[1]}...")
         lock.release()
         reactor.run(installSignalHandlers=False)
 
@@ -144,15 +138,15 @@ if __name__ == '__main__':
         print("No TVs found.")
         sys.exit(1)
 
-    get_host_ip(tv["ip"])
+    host = [get_host_ip(tv["ip"]), None]
 
     lock = threading.Lock()
     lock.acquire()
-    threading.Thread(target=serve_media, args=(args.video, lock,)).start()
+    threading.Thread(target=serve_media, args=(args.video, host, lock,)).start()
 
     lock.acquire()
     print(f"Casting to \"{tv['name']}\"...")
     message = AVTransportTemplate.replace("$$$URI$$$",
-                                          f"http://{HOST}:{PORT}/media.mp4")
+                                          f"http://{host[0]}:{host[1]}/media.mp4")
     send_message(tv["ip"], tv["port"], tv["url"], message, "SetAVTransportURI")
     send_message(tv["ip"], tv["port"], tv["url"], PlayMessage, "Play")
