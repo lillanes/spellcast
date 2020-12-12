@@ -8,9 +8,11 @@ from urllib import parse, request
 
 from requests import post
 
-AVTransportTemplate = '<?xml version="1.0" encoding="utf-8"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:SetAVTransportURI xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID><CurrentURI>$$$URI$$$</CurrentURI><CurrentURIMetaData></CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
+DISCOVER = "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nST: urn:schemas-upnp-org:service:AVTransport:1\r\nMX: 3\r\n\r\n\r\n"
 
-PlayMessage = '<?xml version="1.0" encoding="utf-8"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:Play xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID><Speed>1</Speed></u:Play></s:Body></s:Envelope>'
+SETURI = '<?xml version="1.0" encoding="utf-8"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:SetAVTransportURI xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID><CurrentURI>$$$URI$$$</CurrentURI><CurrentURIMetaData></CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
+
+PLAY = '<?xml version="1.0" encoding="utf-8"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:Play xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID><Speed>1</Speed></u:Play></s:Body></s:Envelope>'
 
 
 class SsdpFakeSocket(BytesIO):
@@ -38,10 +40,9 @@ def ssdp_discover(service):
 
 def cast(tv, port):
     host = get_host_ip(tv["ip"])
-    message = AVTransportTemplate.replace("$$$URI$$$",
-                                          f"http://{host}:{port}/media.mp4")
+    message = SETURI.replace("$$$URI$$$", f"http://{host}:{port}/media.mp4")
     send_message(tv["ip"], tv["port"], tv["url"], message, "SetAVTransportURI")
-    send_message(tv["ip"], tv["port"], tv["url"], PlayMessage, "Play")
+    send_message(tv["ip"], tv["port"], tv["url"], PLAY, "Play")
 
 
 def discover():
