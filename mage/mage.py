@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-# This code is heavily based on https://github.com/probonopd/video2smarttv
-
 import argparse
 import logging
 import os

@@ -29,3 +29,13 @@ found on the network:
 ```sh
 ./mage.py /path/to/video.mp4
 ```
+
+## Acknowledgements
+
+This implementation borrows a lot from the
+[video2smarttv](https://github.com/probonopd/video2smarttv) project by
+[probonopd](https://github.com/probonopd), which in turn uses
+[dankrause's](https://github.com/dankrause) solution for [SSDP
+discovery](https://gist.github.com/dankrause/6000248). Thanks go to all
+developers involved!
+
