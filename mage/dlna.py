@@ -36,10 +36,10 @@ def ssdp_discover(service):
     return results
 
 
-def cast(host, tv):
-    host[0] = get_host_ip(tv["ip"])
+def cast(tv, port):
+    host = get_host_ip(tv["ip"])
     message = AVTransportTemplate.replace("$$$URI$$$",
-                                          f"http://{host[0]}:{host[1]}/media.mp4")
+                                          f"http://{host}:{port}/media.mp4")
     send_message(tv["ip"], tv["port"], tv["url"], message, "SetAVTransportURI")
     send_message(tv["ip"], tv["port"], tv["url"], PlayMessage, "Play")
 

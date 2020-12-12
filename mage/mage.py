@@ -4,13 +4,12 @@ import argparse
 import logging
 import os
 import sys
-import threading
 
-import dlna
-import server
+from dlna import cast, discover
+from server import DLNAFileServer
 
 
-if __name__ == '__main__':
+def get_cli_arguments():
     parser = argparse.ArgumentParser(
             description="Cast a video file to a UPnP Media Renderer (e.g., a Smart TV)",
             add_help=True)
@@ -20,11 +19,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     args.video = os.path.abspath(args.video[0])
-    if args.verbose:
-        server.start_logging()
-        logging.basicConfig(level=logging.DEBUG)
+    return args
 
-    tvs = dlna.discover()
+
+def get_tv():
+    tvs = discover()
 
     if len(tvs) > 1:
         logging.warning("Multiple TVs found. Choice not implemented. Will use first one found.")
@@ -32,24 +31,24 @@ if __name__ == '__main__':
     if tvs:
         for tv in tvs:
             print("TV:", tv["name"])
-        tv = tvs[0]
+        return tvs[0]
     else:
         print("No TVs found.")
         sys.exit(1)
 
-    host = [None, None]
 
-    server_ready = threading.Event()
-    server_thread = threading.Thread(target=server.serve_media, args=(args.video, host, server_ready,))
-    server_thread.start()
+if __name__ == '__main__':
+    args = get_cli_arguments()
 
-    server_ready.wait()
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+
+    tv = get_tv()
+
+    server = DLNAFileServer(args.verbose)
+    port = server.start(args.video)
+
     print(f"Casting to \"{tv['name']}\"...")
-    dlna.cast(host, tv)
+    cast(tv, port)
 
-    print("Done. Send interrupt (Ctrl-C) to exit.")
-    try:
-        server_thread.join()
-    except KeyboardInterrupt:
-        print("Cleaning up...")
-        server.stop()
+    server.wait()

@@ -1,5 +1,6 @@
 import os
 import tempfile
+import threading
 
 from twisted.internet import reactor
 from twisted.python import log
@@ -17,20 +18,34 @@ class DLNAFile(File):
         return self.render_GET(request)
 
 
-def serve_media(media, host, ready):
-    global PORT
-    with tempfile.TemporaryDirectory() as path:
-        os.chdir(path)
-        os.symlink(media, "media.mp4")
-        open("index.html", "w").close()
-        host[1] = reactor.listenTCP(0, Site(DLNAFile(path))).getHost().port
-        ready.set()
-        reactor.run(installSignalHandlers=False)
+class DLNAFileServer():
+    def __init__(self, verbose=False):
+        self.thread = None
+        if verbose:
+            log.PythonLoggingObserver().start()
 
+    def serve_media(self, media, ready, port):
+        with tempfile.TemporaryDirectory() as path:
+            os.chdir(path)
+            os.symlink(media, "media.mp4")
+            open("index.html", "w").close()
+            port.append(reactor.listenTCP(0, Site(DLNAFile(path))).getHost().port)
+            ready.set()
+            reactor.run(installSignalHandlers=False)
 
-def start_logging():
-    log.PythonLoggingObserver().start()
+    def start(self, media):
+        port = []
+        ready = threading.Event()
+        self.thread = threading.Thread(target=self.serve_media, args=(media, ready, port,))
+        self.thread.start()
 
+        ready.wait()
+        return port[0]
 
-def stop():
-    reactor.stop()
+    def wait(self):
+        try:
+            print("Send interrupt to stop (Ctrl-C).")
+            self.thread.join()
+        except KeyboardInterrupt:
+            print("Cleaning up...")
+            reactor.stop()
