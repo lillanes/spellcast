@@ -1,3 +1,5 @@
+"""mage.dlna: DLNA related utilities (discovery and AV control)"""
+
 import logging
 import re
 import socket

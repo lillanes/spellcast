@@ -1,3 +1,5 @@
+"""mage.server: HTTP server for a single file to be streamed via DLNA"""
+
 import os
 import tempfile
 import threading

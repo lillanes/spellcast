@@ -1,12 +1,12 @@
-#!/usr/bin/env python3
+"""mage.mage: main entry point for sending video to DLNA media renderer"""
 
 import argparse
 import logging
 import os
 import sys
 
-from dlna import cast, discover
-from server import DLNAFileServer
+from .dlna import cast, discover
+from .server import DLNAFileServer
 
 
 def get_cli_arguments():
@@ -55,7 +55,7 @@ def get_tv():
         return tvs[option]
 
 
-if __name__ == '__main__':
+def main():
     args = get_cli_arguments()
 
     if args.verbose:
