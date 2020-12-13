@@ -23,18 +23,36 @@ def get_cli_arguments():
 
 
 def get_tv():
-    tvs = discover()
+    while True:
+        print("Finding media renderers...")
+        tvs = discover()
 
-    if len(tvs) > 1:
-        logging.warning("Multiple TVs found. Choice not implemented. Will use first one found.")
+        if not tvs:
+            print("No renderers found.")
 
-    if tvs:
-        for tv in tvs:
-            print("TV:", tv["name"])
-        return tvs[0]
-    else:
-        print("No TVs found.")
-        sys.exit(1)
+        while True:
+            print()
+            i = 0
+            for i, tv in enumerate(tvs):
+                print(f"{i}: use \"{tv['name']}\"")
+
+            print(f"{i+1}: try again")
+            print(f"{i+2}: exit")
+
+            try:
+                option = int(input("Select an option: "))
+                if option > i + 2 or option < 0:
+                    continue
+                break
+            except ValueError:
+                pass
+
+        if option == i + 2:
+            sys.exit(0)
+        if option == i + 1:
+            continue
+
+        return tvs[option]
 
 
 if __name__ == '__main__':
