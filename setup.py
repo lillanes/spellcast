@@ -9,8 +9,8 @@ setup(
     name="spellcast",
     packages=["spellcast"],
     entry_points={
-        "console_scripts": ['spellcast = spellcast.spellcast:main']
-        "console_scripts": ['cast = spellcast.spellcast:main']
+        "console_scripts": ['spellcast = spellcast.spellcast:main',
+                            'cast = spellcast.spellcast:main']
         },
     version=VERSION,
     description="Casts a video to a DLNA media renderer in the local network.",
