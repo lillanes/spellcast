@@ -1,4 +1,4 @@
-"""mage.mage: main entry point for sending video to DLNA media renderer"""
+"""spellcast.spellcast: main entry point for sending video to DLNA media renderer"""
 
 import argparse
 import logging
